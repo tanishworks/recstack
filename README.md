@@ -53,6 +53,6 @@ chmod +x recorder
 ./recorder
 ```
 ## Output
-name.mkv — screen + system audio
+`name.mkv` — screen + system audio
 <br />
-name.wav — microphone audio
+`name.wav` — microphone audio
