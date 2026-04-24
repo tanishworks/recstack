@@ -1,0 +1,54 @@
+#!/bin/bash
+
+echo "=== Recording Setup ==="
+
+# Ask for recording name
+read -p "Enter recording name: " NAME
+
+echo ""
+echo "Available input devices:"
+
+# Build clean list
+mapfile -t DEVICES < <(pactl list sources | awk '
+/Name:/ {name=$2}
+/Description:/ {
+    desc = substr($0, index($0,$2))
+
+    # Only real input sources (ignore monitors)
+    if (name !~ /\.monitor$/) {
+        print name "|" desc
+    }
+}')
+
+# Display nicely
+for i in "${!DEVICES[@]}"; do
+    DESC=$(echo "${DEVICES[$i]}" | cut -d'|' -f2-)
+    echo "$((i+1))) $DESC"
+done
+
+# Ask user to pick
+read -p "Select device number: " DEV_NUM
+
+INDEX=$((DEV_NUM-1))
+DEVICE=$(echo "${DEVICES[$INDEX]}" | cut -d'|' -f1)
+
+if [ -z "$DEVICE" ]; then
+    echo "Invalid selection. This was not a difficult task."
+    exit 1
+fi
+
+echo ""
+echo "Using mic: $DEVICE"
+echo "Recording started. Press Ctrl+C to stop."
+
+# Start recordings
+gpu-screen-recorder -w screen -f 60 -a default_output -o "${NAME}.mkv" &
+VID_PID=$!
+
+parecord --device="$DEVICE" "${NAME}.wav" &
+MIC_PID=$!
+
+# Handle Ctrl+C
+trap "echo 'Stopping...'; kill $VID_PID $MIC_PID; wait; echo 'Saved: ${NAME}.mkv + ${NAME}.wav'; exit" INT
+
+wait
